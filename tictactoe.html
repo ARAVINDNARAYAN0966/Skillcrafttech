@@ -1,0 +1,248 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>SCT 3 - Tic Tac Toe</title>
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+      font-family: 'Arial', sans-serif;
+    }
+
+    body {
+      background: linear-gradient(135deg, #0f2027, #203a43, #2c5364);
+      color: white;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      height: 100vh;
+      overflow: hidden;
+    }
+
+    /* Aesthetic glowing background effect */
+    body::before {
+      content: "";
+      position: absolute;
+      top: -50%;
+      left: -50%;
+      width: 200%;
+      height: 200%;
+      background: radial-gradient(circle, rgba(0,255,255,0.15) 20%, transparent 60%),
+                  radial-gradient(circle, rgba(255,0,150,0.15) 20%, transparent 60%);
+      background-size: 400px 400px;
+      animation: move 20s linear infinite;
+      z-index: 0;
+    }
+
+    @keyframes move {
+      from { transform: translate(0, 0); }
+      to { transform: translate(50px, 50px); }
+    }
+
+    /* Game Container */
+    .container {
+      text-align: center;
+      position: relative;
+      z-index: 1;
+    }
+
+    h1 {
+      font-size: 40px;
+      margin-bottom: 20px;
+      text-shadow: 0px 0px 20px #ff0055, 0px 0px 40px #00eaff;
+    }
+
+    .board {
+      display: grid;
+      grid-template-columns: repeat(3, 120px);
+      grid-template-rows: repeat(3, 120px);
+      gap: 12px;
+      justify-content: center;
+    }
+
+    .cell {
+      width: 120px;
+      height: 120px;
+      background: #111;
+      border-radius: 20px;
+      border: 3px solid #00eaff;
+      font-size: 60px;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      cursor: pointer;
+      transition: transform 0.2s ease, background 0.3s;
+      color: #ff0055;
+      text-shadow: 0px 0px 15px #ff0055, 0px 0px 30px #00eaff;
+    }
+
+    .cell:hover {
+      transform: scale(1.1);
+      background: #222;
+    }
+
+    .cell.taken {
+      pointer-events: none;
+    }
+
+    /* Button */
+    button {
+      margin-top: 20px;
+      padding: 14px 28px;
+      font-size: 18px;
+      background: linear-gradient(135deg, #ff0055, #00eaff);
+      border: none;
+      border-radius: 50px;
+      color: white;
+      cursor: pointer;
+      font-weight: bold;
+      text-transform: uppercase;
+      animation: jiggle 1s infinite;
+      transition: 0.3s;
+    }
+
+    button:hover {
+      background: linear-gradient(135deg, #00eaff, #ff0055);
+      transform: scale(1.05);
+    }
+
+    @keyframes jiggle {
+      0%, 100% { transform: rotate(0deg); }
+      25% { transform: rotate(1deg); }
+      50% { transform: rotate(-1deg); }
+      75% { transform: rotate(1deg); }
+    }
+
+    .winner {
+      margin-top: 15px;
+      font-size: 26px;
+      text-shadow: 0px 0px 15px #00ff99;
+    }
+
+    /* Confetti */
+    .confetti {
+      position: fixed;
+      top: -10px;
+      width: 10px;
+      height: 10px;
+      background: red;
+      opacity: 0.7;
+      animation: fall 3s linear forwards;
+      z-index: 999;
+    }
+
+    @keyframes fall {
+      0% { transform: translateY(0) rotate(0deg); }
+      100% { transform: translateY(100vh) rotate(720deg); }
+    }
+  </style>
+</head>
+<body>
+  <!-- Game -->
+  <div class="container">
+    <h1>Tic Tac Toe Web Application</h1>
+    <div class="board" id="board">
+      <div class="cell" data-index="0"></div>
+      <div class="cell" data-index="1"></div>
+      <div class="cell" data-index="2"></div>
+      <div class="cell" data-index="3"></div>
+      <div class="cell" data-index="4"></div>
+      <div class="cell" data-index="5"></div>
+      <div class="cell" data-index="6"></div>
+      <div class="cell" data-index="7"></div>
+      <div class="cell" data-index="8"></div>
+    </div>
+    <button onclick="restartGame()">Restart Game</button>
+    <div class="winner" id="winner"></div>
+  </div>
+
+  <!-- Click sound -->
+  <audio id="clickSound" src="https://www.fesliyanstudios.com/play-mp3/387"></audio>
+
+  <script>
+    const cells = document.querySelectorAll(".cell");
+    const winnerText = document.getElementById("winner");
+    const clickSound = document.getElementById("clickSound");
+
+    let currentPlayer = "✖️";
+    let gameActive = true;
+    let gameState = ["", "", "", "", "", "", "", "", ""];
+
+    const winningConditions = [
+      [0, 1, 2],
+      [3, 4, 5],
+      [6, 7, 8],
+      [0, 3, 6],
+      [1, 4, 7],
+      [2, 5, 8],
+      [0, 4, 8],
+      [2, 4, 6]
+    ];
+
+    cells.forEach(cell => {
+      cell.addEventListener("click", handleClick);
+    });
+
+    function handleClick(e) {
+      const index = e.target.getAttribute("data-index");
+
+      if (gameState[index] !== "" || !gameActive) return;
+
+      clickSound.currentTime = 0;
+      clickSound.play();
+
+      gameState[index] = currentPlayer;
+      e.target.textContent = currentPlayer;
+      e.target.classList.add("taken");
+
+      if (checkWinner()) {
+        winnerText.textContent = `${currentPlayer} Wins! 🎉`;
+        gameActive = false;
+        launchConfetti();
+        return;
+      }
+
+      if (!gameState.includes("")) {
+        winnerText.textContent = "It's a Draw! 😮";
+        gameActive = false;
+        return;
+      }
+
+      currentPlayer = currentPlayer === "✖️" ? "⭕" : "✖️";
+    }
+
+    function checkWinner() {
+      return winningConditions.some(condition => {
+        return condition.every(index => gameState[index] === currentPlayer);
+      });
+    }
+
+    function restartGame() {
+      gameState = ["", "", "", "", "", "", "", "", ""];
+      gameActive = true;
+      currentPlayer = "✖️";
+      winnerText.textContent = "";
+      cells.forEach(cell => {
+        cell.textContent = "";
+        cell.classList.remove("taken");
+      });
+    }
+
+    function launchConfetti() {
+      for (let i = 0; i < 100; i++) {
+        let confetti = document.createElement("div");
+        confetti.classList.add("confetti");
+        confetti.style.left = Math.random() * window.innerWidth + "px";
+        confetti.style.backgroundColor = `hsl(${Math.random() * 360}, 100%, 50%)`;
+        confetti.style.animationDuration = (Math.random() * 3 + 2) + "s";
+        document.body.appendChild(confetti);
+
+        setTimeout(() => confetti.remove(), 5000);
+      }
+    }
+  </script>
+</body>
+</html>
